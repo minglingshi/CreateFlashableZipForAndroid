@@ -1,0 +1,74 @@
+#!/sbin/sh
+# By Sun 
+
+OUTFD=/proc/self/fd/$2;
+ZIPFILE="$3";
+block_prefix="/dev/block/by-name/"
+ui_print() {
+  if $BOOTMODE; then
+    echo "$1";
+  else
+    echo -e "ui_print $1\nui_print" >> $OUTFD;
+  fi;
+}
+
+backup()
+{
+ui_print "$1 to $2"
+dd if=$block_prefix$1_a of=./images/$2
+}
+abort() { ui_print "$1"; exit 1; }
+
+# detect Magisk Manager/booted flashing
+BOOTMODE=false;
+ps | grep zygote | grep -v grep >/dev/null && BOOTMODE=true;
+$BOOTMODE || ps -A 2>/dev/null | grep zygote | grep -v grep >/dev/null && BOOTMODE=true;
+
+ui_print "########################################";
+ui_print "#CreateFlashableZip for Realme GT 5G    #";
+ui_print "########################################";
+ui_print "#          搞机前请先备份重要数据       #";
+ui_print "########################################";
+ui_print "# 制作日期:2023年1月27日                #";
+ui_print "#           作者：酷安@然后成为老弟二号 #";
+ui_print "########################################";
+ui_print " ";
+# /dev/tmp is safe for both booted and recovery installs
+ui_print " ";
+unzip -o "$ZIPFILE" -x Sun -n -d /data || abort "Failed to extract zip!";
+cd /data/Sun
+chmod -R 777 *
+ui_print "Started to backup"
+backup boot boot.img
+backup dtbo dtbo.img
+backup vendor_boot vendor_boot.img
+backup vbmeta vbmeta.img
+backup vbmeta_system vbmeta_system.img
+backup vbmeta_vendor vbmeta_vendor.img
+backup abl abl.elf
+backup aop aop.mbn
+backup bluetooth BTFM.bin
+backup cpucp cpucp.elf
+backup devcfg devcfg.mbn
+backup dsp dspso.bin
+backup engineering_cdt engineering_cdt.img
+backup featenabler featenabler.mbn
+backup hyp hypvm.mbn
+backup imagefv imagefv.elf
+backup keymaster km41.mbn
+backup multiimgoem multi_image.mbn
+backup oplus_sec oplus_sec.mbn
+backup oplusstanvbk static_nvbk.20627.bin
+backup qupfw qupv3fw.elf
+backup qweslicstore qweslicstore.bin
+backup shrm shrm.elf
+backup splash splash.img
+backup tz tz.mbn
+backup uefisecapp uefi_sec.mbn
+backup xbl xbl.elf
+backup xbl_config xbl_config.elf
+backup modem NON-HLOS.bin
+backup vm-bootsys vm-bootsys.img
+ui_print "zstd compressing super"
+ui_print "this may take a while"
+cat /dev/block/by-name/super | bin/android/zstd -10 -o ./images/super.img.zst
